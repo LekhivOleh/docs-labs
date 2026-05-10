@@ -1,0 +1,118 @@
+@model docs_project.Presentation.ViewModels.Chats.ChatsIndexViewModel
+
+<h1>Chats</h1>
+
+<p>Total chats: @Model.Chats.Count</p>
+
+<h2>Create Direct Chat</h2>
+<form asp-action="CreateDirect" method="post">
+    @Html.AntiForgeryToken()
+    <div>
+        <label for="FirstUserId">First user</label>
+        <select name="FirstUserId" id="FirstUserId"
+                asp-items="@(new SelectList(Model.Users, "Id", "Username"))">
+            <option value="">-- Select user --</option>
+        </select>
+    </div>
+    <div>
+        <label for="SecondUserId">Second user</label>
+        <select name="SecondUserId" id="SecondUserId"
+                asp-items="@(new SelectList(Model.Users, "Id", "Username"))">
+            <option value="">-- Select user --</option>
+        </select>
+    </div>
+    <button type="submit">Create direct</button>
+</form>
+
+<h2>Create Group Chat</h2>
+<form asp-action="CreateGroup" method="post">
+    @Html.AntiForgeryToken()
+    <div>
+        <label for="Title">Title</label>
+        <input name="Title" id="Title" value="@Model.NewGroup.Title" />
+    </div>
+    <div>
+        <label for="OwnerId">Owner</label>
+        <select name="OwnerId" id="OwnerId"
+                asp-items="@(new SelectList(Model.Users, "Id", "Username"))">
+            <option value="">-- Select owner --</option>
+        </select>
+    </div>
+    <div>
+        <label for="UserIds">Members</label>
+        <select name="UserIds" id="UserIds"
+                asp-items="@(new SelectList(Model.Users, "Id", "Username"))"
+                multiple="multiple">
+        </select>
+    </div>
+    <button type="submit">Create group</button>
+</form>
+
+<div asp-validation-summary="ModelOnly"></div>
+
+<h2>Your Chats</h2>
+@if (!Model.YourChats.Any())
+{
+    <p>You are not a member of any chat yet.</p>
+}
+else
+{
+    <table>
+        <thead>
+        <tr>
+            <th>Type</th>
+            <th>Title</th>
+            <th>Members</th>
+            <th>Messages</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var chat in Model.YourChats)
+        {
+            <tr>
+                <td>@chat.Type</td>
+                <td>@(chat.Title ?? "—")</td>
+                <td>@chat.Users.Count</td>
+                <td>@chat.Messages.Count</td>
+                <td><a asp-action="Details" asp-route-id="@chat.Id">Open</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+<h2>All Chats</h2>
+<table>
+    <thead>
+    <tr>
+        <th>Type</th>
+        <th>Title</th>
+        <th>Users</th>
+        <th>Messages</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var chat in Model.Chats)
+    {
+        <tr>
+            <td>@chat.Type</td>
+            <td>@chat.Title</td>
+            <td>@chat.Users.Count</td>
+            <td>@chat.Messages.Count</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@chat.Id">Open</a>
+                @if (chat.Type == "GroupChat")
+                {
+                    <a asp-action="EditGroup" asp-route-id="@chat.Id">Edit</a>
+                }
+                <form asp-action="Delete" asp-route-id="@chat.Id" method="post" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

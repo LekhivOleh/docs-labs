@@ -7,6 +7,7 @@ namespace docs_project.Application.Interfaces.Repositories
         Task AddAsync(Chat chat);
         Task<Chat?> GetByIdAsync(Guid id);
         Task<List<Chat>> GetAllAsync();
+        Task UpdateAsync(Chat chat);
         Task AddUserToGroupAsync(Guid groupId, Guid userId);
         Task DeleteAsync(Guid id);
         Task<List<GroupChat>> GetAllGroupsAsync();

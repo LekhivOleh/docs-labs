@@ -1,0 +1,19 @@
+@model docs_project.Presentation.ViewModels.Chats.GroupChatEditViewModel
+
+<h1>Edit Group Chat</h1>
+
+<form asp-action="EditGroup" asp-route-id="@Model.Id" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div>
+        <label asp-for="Title"></label>
+        <input asp-for="Title" />
+        <span asp-validation-for="Title"></span>
+    </div>
+
+    <button type="submit">Save</button>
+</form>
+
+<div asp-validation-summary="ModelOnly"></div>
+<p><a asp-action="Index">Back</a></p>

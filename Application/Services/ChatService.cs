@@ -20,6 +20,14 @@ namespace docs_project.Application.Services
             _userRepository = userRepository;
         }
 
+        public async Task UpdateGroupTitleAsync(Guid id, string title)
+        {
+            var group = await _chatRepository.GetGroupByIdAsync(id);
+            if (group is null) return;
+            group.Title = title;
+            await _chatRepository.UpdateAsync(group);
+        }
+
         public async Task AddUserToGroupAsync(Guid groupId, Guid userId)
         {
             await _chatRepository.AddUserToGroupAsync(groupId, userId);
@@ -152,9 +160,18 @@ namespace docs_project.Application.Services
 
             if (c.Messages != null)
             {
+                var userLookup = c.Users?.ToDictionary(u => u.Id, u => u.Username) ?? new();
                 foreach (var m in c.Messages)
                 {
-                    dto.Messages.Add(new MessageDto { Id = m.Id, CreatedAt = m.CreatedAt, Content = m.Content, UserId = m.UserId, ChatId = m.ChatId });
+                    dto.Messages.Add(new MessageDto
+                    {
+                        Id = m.Id,
+                        CreatedAt = m.CreatedAt,
+                        Content = m.Content,
+                        UserId = m.UserId,
+                        Username = userLookup.TryGetValue(m.UserId, out var name) ? name : null,
+                        ChatId = m.ChatId
+                    });
                 }
             }
 

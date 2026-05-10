@@ -1,0 +1,51 @@
+@model docs_project.Presentation.ViewModels.Chats.ChatDetailsViewModel
+
+<h1>Chat Details</h1>
+
+<p><strong>Id:</strong> @Model.Chat.Id</p>
+<p><strong>Type:</strong> @Model.Chat.Type</p>
+@if (!string.IsNullOrWhiteSpace(Model.Chat.Title))
+{
+    <p><strong>Title:</strong> @Model.Chat.Title</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <p style="color:red;">@Model.Error</p>
+}
+
+<h2>Users</h2>
+<ul>
+    @foreach (var user in Model.Chat.Users)
+    {
+        <li>@user.Username (@user.Email)</li>
+    }
+</ul>
+
+<h2>Messages</h2>
+<ul>
+    @foreach (var msg in Model.Chat.Messages.OrderBy(m => m.CreatedAt))
+    {
+        <li>
+            <strong>@(msg.Username ?? msg.UserId.ToString())</strong>: @msg.Content
+            <small>(@msg.CreatedAt)</small>
+        </li>
+    }
+</ul>
+
+<h2>Send Message</h2>
+<form asp-action="SendMessage" method="post">
+    @Html.AntiForgeryToken()
+    <input asp-for="NewMessage.ChatId" type="hidden" />
+
+    <div>
+        <label asp-for="NewMessage.Content"></label>
+        <textarea asp-for="NewMessage.Content"></textarea>
+        <span asp-validation-for="NewMessage.Content"></span>
+    </div>
+
+    <button type="submit">Send</button>
+</form>
+
+<p><a asp-action="Index">Back</a></p>
+
