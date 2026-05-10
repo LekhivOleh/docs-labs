@@ -1,0 +1,50 @@
+@model List<docs_project.Domain.Entities.User>
+
+<h1>Users</h1>
+
+@if (TempData["Error"] is string error)
+{
+    <p style="color:red;">@error</p>
+}
+@if (TempData["Info"] is string info)
+{
+    <p style="color:green;">@info</p>
+}
+
+<p>
+    <a asp-action="Create">Create user</a>
+</p>
+
+<form asp-action="Import" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <input type="file" name="file" accept=".csv" />
+    <button type="submit">Import CSV</button>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var user in Model)
+    {
+        <tr>
+            <td>@user.Username</td>
+            <td>@user.Email</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@user.Id">Details</a>
+                <a asp-action="Edit" asp-route-id="@user.Id">Edit</a>
+                <form asp-action="Delete" asp-route-id="@user.Id" method="post" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+

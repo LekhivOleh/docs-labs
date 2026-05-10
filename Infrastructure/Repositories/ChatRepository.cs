@@ -82,6 +82,12 @@ namespace docs_project.Infrastructure.Repositories
                 .FirstOrDefaultAsync(d => d.Id == id);
         }
 
+        public async Task UpdateAsync(Chat chat)
+        {
+            _context.Chats.Update(chat);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task AddUserToGroupAsync(Guid groupId, Guid userId)
         {
             var group = await _context.GroupChats

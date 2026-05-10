@@ -10,6 +10,7 @@ namespace docs_project.Application.Interfaces.Services
         Task<ChatDto> CreateDirectAsync(DirectChatUpsertDto dto);
         Task<ChatDto?> GetByIdAsync(Guid id);
         Task<List<ChatDto>> GetAllAsync();
+        Task UpdateGroupTitleAsync(Guid id, string title);
         Task AddUserToGroupAsync(Guid groupId, Guid userId);
         Task DeleteAsync(Guid id);
         Task<List<ChatDto>> GetAllGroupsAsync();

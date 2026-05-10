@@ -9,6 +9,7 @@ namespace docs_project.Application.Dto.Read
         [Required]
         public string? Content { get; set; }
         public Guid UserId { get; set; }
+        public string? Username { get; set; }
         public Guid ChatId { get; set; }
         // IsRead property removed
     }
