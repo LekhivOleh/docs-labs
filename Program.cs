@@ -1,64 +1,57 @@
-using docs_project.Application.Interfaces.Repositories;
-using docs_project.Application.Interfaces.Services;
-using docs_project.Application.Services;
-using docs_project.Infrastructure.Csv;
-using docs_project.Infrastructure.Data;
-using docs_project.Infrastructure.Repositories;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.EntityFrameworkCore;
+using docs_project.Fetchers;
+using docs_project.Readers;
+using docs_project.Strategies;
+using Microsoft.Extensions.Configuration;
 
-var builder = WebApplication.CreateBuilder(args);
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: false)
+    .Build();
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=app.db"));
+var dataSourceUrl = configuration["DataSourceUrl"]
+    ?? "https://data.cityofnewyork.us/api/views/jb7j-dtam/rows.csv?accessType=DOWNLOAD";
+var dataFilePath = configuration["DataFilePath"] ?? "Data/nyc_causes_of_death.csv";
+var strategyName = configuration["OutputStrategy"] ?? "Console";
+var pageSize = int.TryParse(configuration["PageSize"], out var ps) && ps > 0 ? ps : 100;
 
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IMessageRepository, MessageRepository>();
-builder.Services.AddScoped<IChatRepository, ChatRepository>();
-builder.Services.AddScoped<ICsvReader, CsvReader>();
-// Application services
-builder.Services.AddScoped<IUserService>(sp => new UserService(sp.GetRequiredService<IUserRepository>(), sp.GetRequiredService<ICsvReader>()));
-builder.Services.AddScoped<IMessageService>(sp => new MessageService(sp.GetRequiredService<IMessageRepository>(), sp.GetRequiredService<IChatRepository>()));
-builder.Services.AddScoped<IChatService>(sp => new ChatService(sp.GetRequiredService<IChatRepository>(), sp.GetRequiredService<IUserRepository>()));
-builder.Services.AddScoped<IAuthService, docs_project.Application.Services.AuthService>();
+var fetcher = new DataFetcher(dataSourceUrl, dataFilePath);
+await fetcher.FetchAndReplaceAsync();
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Account/Login";
-        options.AccessDeniedPath = "/Account/Login";
-    });
-
-builder.Services.AddAuthorization();
-
-builder.Services.AddControllersWithViews()
-    .AddRazorOptions(options =>
-    {
-        options.ViewLocationFormats.Clear();
-        options.ViewLocationFormats.Add("/Presentation/Views/{1}/{0}.cshtml");
-        options.ViewLocationFormats.Add("/Presentation/Views/Shared/{0}.cshtml");
-    })
-    .AddJsonOptions(o =>
-    {
-        o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-        o.JsonSerializerOptions.MaxDepth = 64;
-    });
-
-var app = builder.Build();
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.Map("/", () =>
+IOutputStrategy strategy = strategyName switch
 {
-    return Results.Redirect("/Home");
-});
+    "Kafka" => new KafkaOutputStrategy(
+        configuration["Kafka:BootstrapServers"] ?? "localhost:9092",
+        configuration["Kafka:Topic"] ?? "nyc-death-causes"),
+    "Redis" => new RedisOutputStrategy(
+        configuration["Redis:ConnectionString"] ?? "localhost:6379",
+        configuration["Redis:Key"] ?? "nyc:death-causes"),
+    "Console" => new ConsoleOutputStrategy(),
+    _ => new ConsoleOutputStrategy()
+};
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+var records = new CsvDataReader(dataFilePath).Read().ToList();
+var totalPages = (int)Math.Ceiling(records.Count / (double)pageSize);
 
-app.Run();
+Console.WriteLine($"Loaded {records.Count} records from '{dataFilePath}'");
+Console.WriteLine($"Output strategy: {strategyName} | Page size: {pageSize}");
+Console.WriteLine(new string('-', 60));
+
+for (var page = 0; page < totalPages; page++)
+{
+    var batch = records.Skip(page * pageSize).Take(pageSize).ToList();
+
+    Console.WriteLine($"[Page {page + 1}/{totalPages} — rows {page * pageSize + 1}–{page * pageSize + batch.Count}]");
+    await strategy.OutputAsync(batch);
+
+    if (page < totalPages - 1)
+    {
+        Console.WriteLine(new string('-', 60));
+        Console.Write("Press any key for the next page...");
+        Console.ReadKey(intercept: true);
+        Console.WriteLine();
+        Console.WriteLine(new string('-', 60));
+    }
+}
+
+Console.WriteLine(new string('-', 60));
+Console.WriteLine("End (but in the end, it doesnt even matter).");
